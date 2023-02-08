@@ -1,9 +1,5 @@
-[package]
-name = "ckboots"
-version = "0.1.0"
-edition = "2021"
-authors = ["JeremyHe<yiliang.he@qq.com>"]
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
-
-[dependencies]
+[workspace]
+members = [
+    "crates/ckboots",
+    "crates/frog-travel",
+]
