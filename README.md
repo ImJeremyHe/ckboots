@@ -54,8 +54,49 @@ pub struct Exp {
 }
 ```
 
-### Define your function and specify the address of your contract
+### Write your contract logic and just add an attribute macro
 
-todo!()
+```rust
+#[contract]
+pub fn complete_mission_1(hero: Hero) -> Hero {
+    let mut hero = hero;
+    hero.exp.level += 1;
+    hero.next_exp = 1000;
+    hero
+}
+```
+
+You are able to use change mutltiple on-chain statuses in a contract, just like this:
+
+```rust
+#[contract]
+pub fn complete_mission_2(hero: Hero, item: Item) -> (Hero, Item);
+```
+
+Note that `Hero` and `Item` should derive `OnChain` and be assigned an `id`.
+
+If your contract need to look at some on-chain statuses to make a decision, you can use unmutable references like:
+
+```rust
+#[contract]
+pub fn complete_mission_2(hero: Hero, item: &Item) -> (Hero);
+```
+
+Some times some arguments should be passed because of users' actions. In these cases, you should create an on-chain struct first like:
+
+```rust
+#[derive(OnChain)]
+#[onchain(user_input=true)] // Notice here!
+pub struct UserInput {
+    /// some fields
+}
+```
+
+And then your contract function can be like:
+
+```rust
+#[contract]
+pub fn complete_mission_2(hero: Hero, user_action: UserInput) -> (Hero);
+```
 
 ### Example

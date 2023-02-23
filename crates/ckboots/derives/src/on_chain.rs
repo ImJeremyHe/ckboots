@@ -6,6 +6,7 @@ use syn::{DataEnum, DataStruct, DeriveInput, NestedMeta};
 
 pub fn get_on_chain_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let mut id: Option<LitStr> = None;
+    let mut user_input: bool = false;
     input
         .attrs
         .iter()
@@ -27,12 +28,20 @@ pub fn get_on_chain_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                     _ => todo!(),
                 }
             }
+            NestedMeta::Meta(NameValue(m)) if m.path.is_ident("user_input") => match m.lit {
+                syn::Lit::Bool(b) => user_input = b.value,
+                _ => todo!(),
+            },
             _ => todo!(),
         });
 
+    if user_input && id.is_some() {
+        panic!("id and user_input should not have value at the same time")
+    }
+
     match &input.data {
-        syn::Data::Struct(data) => get_struct_impl_block(&input, &data, id),
-        syn::Data::Enum(data) => get_enum_impl_block(&input, &data, id),
+        syn::Data::Struct(data) => get_struct_impl_block(&input, &data, id, user_input),
+        syn::Data::Enum(data) => get_enum_impl_block(&input, &data, id, user_input),
         syn::Data::Union(_) => todo!(),
     }
 }
@@ -41,6 +50,7 @@ fn get_struct_impl_block(
     input: &DeriveInput,
     data: &DataStruct,
     id: Option<LitStr>,
+    user_input: bool,
 ) -> proc_macro2::TokenStream {
     let ident = &input.ident;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
@@ -94,6 +104,10 @@ fn get_struct_impl_block(
             fn _id() -> Option<&'static str> {
                 #id_tokens
             }
+
+            fn _user_input() -> bool {
+                #user_input
+            }
         }
     }
 }
@@ -102,6 +116,7 @@ fn get_enum_impl_block(
     input: &DeriveInput,
     data: &DataEnum,
     id: Option<LitStr>,
+    user_input: bool,
 ) -> proc_macro2::TokenStream {
     if data.variants.len() == 0 {
         panic!("onchain enum should has at least 1 variant")
@@ -202,6 +217,10 @@ fn get_enum_impl_block(
 
             fn _fixed_size() -> Option<u64> {
                 None
+            }
+
+            fn _user_input() -> bool {
+                #user_input
             }
         }
     }
