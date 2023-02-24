@@ -6,7 +6,6 @@ use syn::{DataEnum, DataStruct, DeriveInput, NestedMeta};
 
 pub fn get_on_chain_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let mut id: Option<LitStr> = None;
-    let mut user_input: bool = false;
     input
         .attrs
         .iter()
@@ -28,20 +27,12 @@ pub fn get_on_chain_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                     _ => todo!(),
                 }
             }
-            NestedMeta::Meta(NameValue(m)) if m.path.is_ident("user_input") => match m.lit {
-                syn::Lit::Bool(b) => user_input = b.value,
-                _ => todo!(),
-            },
             _ => todo!(),
         });
 
-    if user_input && id.is_some() {
-        panic!("id and user_input should not have value at the same time")
-    }
-
     match &input.data {
-        syn::Data::Struct(data) => get_struct_impl_block(&input, &data, id, user_input),
-        syn::Data::Enum(data) => get_enum_impl_block(&input, &data, id, user_input),
+        syn::Data::Struct(data) => get_struct_impl_block(&input, &data, id),
+        syn::Data::Enum(data) => get_enum_impl_block(&input, &data, id),
         syn::Data::Union(_) => todo!(),
     }
 }
@@ -50,7 +41,6 @@ fn get_struct_impl_block(
     input: &DeriveInput,
     data: &DataStruct,
     id: Option<LitStr>,
-    user_input: bool,
 ) -> proc_macro2::TokenStream {
     let ident = &input.ident;
     let (impl_generics, type_generics, where_clause) = input.generics.split_for_impl();
@@ -71,6 +61,7 @@ fn get_struct_impl_block(
         quote!(None)
     };
     quote! {
+        use ckboots::OnChain;
         impl #impl_generics OnChain for #ident #type_generics #where_clause{
             fn _capacity(&self) -> u64 {
                 0u64 #(+ self.#field_idents._capacity())*
@@ -90,7 +81,7 @@ fn get_struct_impl_block(
 
             fn _from_bytes(bytes: &[u8]) -> Option<Self> {
                 let mut left = bytes;
-                #(let (#field_idents, left) = consume_and_decode::<#field_types>(left)?;)*
+                #(let (#field_idents, left) = ckboots::consume_and_decode::<#field_types>(left)?;)*
                 Some(Self {
                     #(#field_idents,)*
                 })
@@ -105,9 +96,6 @@ fn get_struct_impl_block(
                 #id_tokens
             }
 
-            fn _user_input() -> bool {
-                #user_input
-            }
         }
     }
 }
@@ -116,7 +104,6 @@ fn get_enum_impl_block(
     input: &DeriveInput,
     data: &DataEnum,
     id: Option<LitStr>,
-    user_input: bool,
 ) -> proc_macro2::TokenStream {
     if data.variants.len() == 0 {
         panic!("onchain enum should has at least 1 variant")
@@ -159,7 +146,7 @@ fn get_enum_impl_block(
             let ty = &field.ty;
             quote! {
                 #i => {
-                    let (item, _) = consume_and_decode::<#ty>(left)?;
+                    let (item, _) = ckboots::consume_and_decode::<#ty>(left)?;
                     Some(Self::#v(item))
                 }
             }
@@ -183,6 +170,7 @@ fn get_enum_impl_block(
     });
 
     quote! {
+        use ckboots::OnChain;
         impl #impl_generics OnChain for #ident #type_generics #where_clause{
             fn _capacity(&self) -> u64 {
                 let prefix = 1u64;
@@ -208,7 +196,7 @@ fn get_enum_impl_block(
             }
 
             fn _from_bytes(bytes: &[u8]) -> Option<Self> {
-                let (idx, left) = consume_and_decode::<u8>(bytes)?;
+                let (idx, left) = ckboots::consume_and_decode::<u8>(bytes)?;
                 match idx {
                     #(#from_bytes_branch,)*
                     _ => unreachable!(),
@@ -217,10 +205,6 @@ fn get_enum_impl_block(
 
             fn _fixed_size() -> Option<u64> {
                 None
-            }
-
-            fn _user_input() -> bool {
-                #user_input
             }
         }
     }

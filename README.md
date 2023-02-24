@@ -58,7 +58,7 @@ pub struct Exp {
 
 ```rust
 #[contract]
-pub fn complete_mission_1(hero: Hero) -> Hero {
+pub fn complete_mission_1(hero: &mut Hero){
     let mut hero = hero;
     hero.exp.level += 1;
     hero.next_exp = 1000;
@@ -66,11 +66,16 @@ pub fn complete_mission_1(hero: Hero) -> Hero {
 }
 ```
 
+Here, `hero` is an on-chain status that will be updated,
+which is implied by an mutable reference.
+
 You are able to use change mutltiple on-chain statuses in a contract, just like this:
 
 ```rust
 #[contract]
-pub fn complete_mission_2(hero: Hero, item: Item) -> (Hero, Item);
+pub fn complete_mission_2(hero: &mut Hero, item: &mut Item) {
+    todo!()
+}
 ```
 
 Note that `Hero` and `Item` should derive `OnChain` and be assigned an `id`.
@@ -79,14 +84,15 @@ If your contract need to look at some on-chain statuses to make a decision, you 
 
 ```rust
 #[contract]
-pub fn complete_mission_2(hero: Hero, item: &Item) -> (Hero);
+pub fn complete_mission_2(hero: &mut Hero, item: &Item) {
+    todo!()
+}
 ```
 
 Some times some arguments should be passed because of users' actions. In these cases, you should create an on-chain struct first like:
 
 ```rust
 #[derive(OnChain)]
-#[onchain(user_input=true)] // Notice here!
 pub struct UserInput {
     /// some fields
 }
@@ -95,8 +101,9 @@ pub struct UserInput {
 And then your contract function can be like:
 
 ```rust
+// user_action is not a reference.
 #[contract]
-pub fn complete_mission_2(hero: Hero, user_action: UserInput) -> (Hero);
+pub fn complete_mission_2(hero: &mut Hero, user_action: UserInput);
 ```
 
 ### Example

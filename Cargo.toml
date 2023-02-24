@@ -1,5 +1,22 @@
+[package]
+name = "ckboots"
+version = "0.1.0"
+edition = "2021"
+authors = ["JeremyHe<yiliang.he@qq.com>"]
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+ckb-hash = "0.106.0"
+ckb-jsonrpc-types = "0.106.0"
+ckb-sdk = "2.4.0"
+ckb-types = "0.106.0"
+secp256k1 = "0.24"
+
+ckboots-derives = { path = "./derives", version = "0.1.0" }
+
 [workspace]
 members = [
-    "crates/ckboots",
-    "crates/frog-travel",
+    "derives",
+    "examples/frog-travel",
 ]
