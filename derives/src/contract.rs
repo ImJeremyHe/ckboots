@@ -43,7 +43,7 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
             },
         );
         quote! {
-                pub fn new(bytes: Vec<&Vec<u8>>) -> Self {
+                pub fn new(bytes: Vec<&[u8]>) -> Self {
                     #(#decodes)*
                     Self {
                         __arg_ptr: 0,
@@ -114,6 +114,12 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
 
     let ident_iter = descriptor.args.iter().map(|e| e.0);
 
+    let id_func = quote! {
+        pub fn _id() -> &'static str {
+            #contract_id
+        }
+    };
+
     quote! {
         pub struct #entry {
             #(#ident_iter: #type_iter,)*
@@ -126,9 +132,7 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
 
             #get_args_ids_func
 
-            // #(#__set_arg_funcs)*
-
-            // #set_arg_func
+            #id_func
 
             #run_func
         }

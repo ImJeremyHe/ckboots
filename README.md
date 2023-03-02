@@ -83,7 +83,7 @@ Note that `Hero` and `Item` should derive `OnChain` and be assigned an `id`.
 If your contract need to look at some on-chain statuses to make a decision, you can use unmutable references like:
 
 ```rust
-#[contract]
+#[contract(Mission2, id="mission2")]
 pub fn complete_mission_2(hero: &mut Hero, item: &Item) {
     todo!()
 }
@@ -102,8 +102,22 @@ And then your contract function can be like:
 
 ```rust
 // user_action is not a reference.
-#[contract]
+#[contract(Mission2, id="mission2")]
 pub fn complete_mission_2(hero: &mut Hero, user_action: UserInput);
 ```
+
+Now, you can create your application and registering on-chain types and contracts.
+
+```rust
+use ckboots::create_app;
+
+create_app!(TravelFrog {
+    types: [Frog],
+    contracts: [Travel],
+})
+
+```
+
+App will automatically build your transaction and send it.
 
 ### Example

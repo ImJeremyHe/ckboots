@@ -1,3 +1,4 @@
+use ckboots::create_app;
 use ckboots_derives::{contract, OnChain};
 
 #[derive(OnChain)]
@@ -12,6 +13,14 @@ fn travel(frog: &mut Frog) {
     frog.physical -= 1;
     frog.traval_cnt += 1;
 }
+
+// #[derive(CkbApp)]
+// #[app(contracts(Travel), types(Frog))]
+// pub struct TravelFrog {}
+create_app!(TravelFrog {
+    types: [Frog],
+    contracts: [Travel],
+});
 
 #[cfg(test)]
 mod tests {

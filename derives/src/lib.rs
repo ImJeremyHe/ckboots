@@ -1,6 +1,8 @@
+mod app;
 mod contract;
 mod on_chain;
 
+use app::get_app_impl_block;
 use contract::build_contract_entry;
 use on_chain::get_on_chain_impl_block;
 
@@ -12,6 +14,12 @@ use syn::{parse_macro_input, AttributeArgs, DeriveInput, Item};
 pub fn derive_on_chain(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     get_on_chain_impl_block(input).into()
+}
+
+#[proc_macro_derive(CkbApp, attributes(app))]
+pub fn derive_app(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    get_app_impl_block(input).into()
 }
 
 #[proc_macro_attribute]
