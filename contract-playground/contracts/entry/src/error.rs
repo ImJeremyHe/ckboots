@@ -7,6 +7,8 @@ pub enum Error {
     ItemMissing,
     LengthNotEnough,
     Encoding,
+    ContractTypeScriptMissing,
+    WrongContractId,
     // Add customized errors here...
     MyError,
 }

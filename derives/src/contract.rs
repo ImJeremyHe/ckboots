@@ -19,7 +19,7 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
         quote! {
             pub fn _get_args_ids() -> Vec<&'static str> {
                 vec![
-                    #(if let Some(id) = #iter::_id() {id} else {"user_input"}),*
+                    #(if let Some(id) = <#iter as ckboots::OnChain>::_id() {id} else {"user_input"}),*
                 ]
             }
         }
@@ -46,7 +46,6 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
                 pub fn new(bytes: Vec<&[u8]>) -> Self {
                     #(#decodes)*
                     Self {
-                        __arg_ptr: 0,
                         #(#idents)*
                     }
                 }
@@ -58,27 +57,27 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
         let func_block = func.block.as_ref();
         let init_branches = descriptor.args.iter().map(|(ident, arg)| match arg {
             SigArg::MutRef(p) => quote! {
-                let _input_id = #p::_id().unwrap();
-                let _input_data = self.#ident._to_bytes();
+                let _input_id = <#p as ckboots::OnChain>::_id().unwrap();
+                let _input_data = <#p as ckboots::OnChain>::_to_bytes(&self.#ident);
                 _inputs.push((_input_id, _input_data));
                 let #ident = &mut self.#ident;
             },
             SigArg::UnmutRef(p) => quote! {
-                let _dep_id = #p::_id().unwrap();
+                let _dep_id = <#p as ckboots::OnChain>::_id().unwrap();
                 _dep_ids.push(_dep_id);
                 let #ident = &self.#ident.unwrap();
             },
-            SigArg::Value(_) => {
+            SigArg::Value(p) => {
                 quote! {
-                    let _user_input_data = &self.#ident._to_bytes();
+                    let _user_input_data = <#p as ckboots::OnChain>::_to_bytes(&self.#ident);
                     _user_input = Some(_user_input_data);
                 }
             }
         });
         let get_output_branch = descriptor.args.iter().map(|(ident, arg)| match arg {
-            SigArg::MutRef(_) => {
+            SigArg::MutRef(p) => {
                 quote! {
-                    let _data = #ident._to_bytes();
+                    let _data = <#p as ckboots::OnChain>::_to_bytes(#ident);
                     _outputs.push(_data);
                 }
             }
@@ -121,9 +120,9 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
     };
 
     quote! {
+        #[derive(ckboots_derives::OnChain)]
         pub struct #entry {
             #(#ident_iter: #type_iter,)*
-            __arg_ptr: u8,
         }
 
         impl #entry {

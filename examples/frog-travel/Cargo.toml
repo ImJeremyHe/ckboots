@@ -8,3 +8,7 @@ edition = "2021"
 [dependencies]
 ckboots = {path = "../../", version = "*"}
 ckboots-derives = {path = "../../derives", version = "*"}
+
+[dev-dependencies]
+ckboots = {path = "../../", version = "*", features = ["contract-generator"]}
+ckboots-derives = {path = "../../derives", version = "*", features = ["contract-generator"]}

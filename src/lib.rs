@@ -1,12 +1,18 @@
+#[cfg(feature = "contract-generator")]
+mod code_str;
+
 mod app;
 mod cell_manager;
 mod contract;
-mod generators;
+pub mod generators;
 mod on_chain;
 
 pub use cell_manager::CellManager;
 pub use contract::ContractResult;
 pub use on_chain::*;
+
+#[cfg(feature = "contract-generator")]
+pub use code_str::__CodeStr__;
 
 #[macro_export]
 macro_rules! create_app {

@@ -61,15 +61,14 @@ fn get_struct_impl_block(
         quote!(None)
     };
     quote! {
-        use ckboots::OnChain;
-        impl #impl_generics OnChain for #ident #type_generics #where_clause{
+        impl #impl_generics ckboots::OnChain for #ident #type_generics #where_clause{
             fn _capacity(&self) -> u64 {
                 0u64 #(+ self.#field_idents._capacity())*
             }
 
             fn _to_bytes(&self) -> Vec<u8> {
                 let mut result = Vec::with_capacity(self._capacity() as usize);
-                #(result.extend(self.#field_idents._to_bytes());)*
+                #(result.extend(<#field_types as ckboots::OnChain>::_to_bytes(&self.#field_idents));)*
                 if let Some(_) = #ident::_fixed_size() {
                     result
                 } else {
@@ -88,7 +87,7 @@ fn get_struct_impl_block(
             }
 
             fn _fixed_size() -> Option<u64> {
-                let size = 0u64 #(+ <#field_types as OnChain>::_fixed_size()?)*;
+                let size = 0u64 #(+ <#field_types as ckboots::OnChain>::_fixed_size()?)*;
                 Some(size)
             }
 
@@ -129,14 +128,14 @@ fn get_enum_impl_block(
         if let Some(_) = f {
             quote! {
                 Self::#v(s) => {
-                    let mut result = #i._to_bytes();
+                    let mut result = <u8 as ckboots::OnChain>::_to_bytes(&#i);
                     result.extend(s._to_bytes());
                     result
                 }
             }
         } else {
             quote! {
-                Self::#v => #i._to_bytes()
+                Self::#v => <u8 as ckboots::OnChain>::_to_bytes(&#i)
             }
         }
     });
@@ -170,8 +169,7 @@ fn get_enum_impl_block(
     });
 
     quote! {
-        use ckboots::OnChain;
-        impl #impl_generics OnChain for #ident #type_generics #where_clause{
+        impl #impl_generics ckboots::OnChain for #ident #type_generics #where_clause{
             fn _capacity(&self) -> u64 {
                 let prefix = 1u64;
                 let cap = match self {

@@ -12,6 +12,7 @@ impl App {
     }
 
     pub fn build_tx(&self, res: ContractResult) -> (TransactionView, HashMap<&'static str, Cell>) {
+        "".as_bytes();
         todo!()
     }
 }

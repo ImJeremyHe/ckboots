@@ -9,29 +9,53 @@ use alloc::{vec, vec::Vec};
 // https://docs.rs/ckb-std/
 use ckb_std::{
     debug,
-    high_level::{load_script, load_tx_hash},
+    high_level::{load_script, load_input, load_cell_type},
     ckb_types::{bytes::Bytes, prelude::*},
+    constants::Source,
 };
+use molecule::prelude::Entity;
 
 use crate::error::Error;
 
 pub fn main() -> Result<(), Error> {
-    // remove below examples and write your code here
+    let mut contract_ids = vec!["c1", "c2", "c3"];
+    contract_ids.sort();
 
-    let script = load_script()?;
-    let args: Bytes = script.args().unpack();
-    debug!("script args is {:?}", args);
+    let app_name = "app_name";
 
-    // return an error if args is invalid
-    if args.is_empty() {
-        return Err(Error::MyError);
+    let input = load_input(0, Source::Input)?;     
+    let mut blake2b = blake2b_rs::Blake2bBuilder::new(32)
+        .personal(b"ckb-default-hash")
+        .build();
+    blake2b.update(input.as_slice());
+    blake2b.update(app_name.as_bytes());
+    let mut hash = [0; 32];
+    blake2b.finalize(&mut hash);
+
+    for (idx, id) in contract_ids.into_iter().enumerate() {
+        let output = load_cell_type(idx, Source::GroupOutput)?;
+        if output.is_none() {
+            return Err(Error::ContractTypeScriptMissing);
+        }
+        let output = output.unwrap();
+        output.args()
     }
-
-    let tx_hash = load_tx_hash()?;
-    debug!("tx hash is {:?}", tx_hash);
-
-    let _buf: Vec<_> = vec![0u8; 32];
-
     Ok(())
 }
 
+// hash equals to blake2b(input[0] | app_name)
+fn check_output_contract(hash: &[u8], id: &'static str, actual: [u8; 32]) -> Result<(), Error> {
+    let mut blake2b = blake2b_rs::Blake2bBuilder::new(32)
+        .personal(b"ckb-default-hash")
+        .build();
+    blake2b.update(hash);
+    blake2b.update(id.as_bytes());
+    let mut ret = [0; 32];
+    blake2b.finalize(&mut ret);
+
+    if ret != actual {
+        return Err(Error::WrongContractId);
+    }
+
+    Ok(())
+}

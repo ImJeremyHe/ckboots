@@ -7,3 +7,5 @@ edition = "2021"
 
 [dependencies]
 ckb-std = "0.10.0"
+blake2b-rs = "0.2.0"
+molecule = {version = "0.7.3", default-features = false}

@@ -7,7 +7,7 @@ pub fn get_app_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     let container = Container::from_attrs(input.attrs);
     let contract_exec_branches = container.contracts.iter().map(|contract| {
         quote! {
-            if id == #contract::_id() {
+            if id == <#contract as ckboots::OnChain>::_id().expect("should have an id") {
                 let ids = #contract::_get_args_ids();
                 let args = ids.into_iter().map(|id| {
                     if id == "user_input" {
@@ -24,6 +24,30 @@ pub fn get_app_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
     });
     let ident = input.ident;
 
+    let generate_contracts = if cfg!(feature = "contract-generator") {
+        let type_str = container.types.iter().map(|p| {
+            quote! {
+                #p::__get_code_str__()
+            }
+        });
+        let content = quote! {
+            let type_strs = vec![
+                #(#type_str),*
+            ];
+            ckboots::generators::contract::write_types("cons", type_strs);
+        };
+        quote! {
+            #[test]
+            pub fn generate_contracts() {
+                use ckboots::__CodeStr__;
+                #content
+            }
+
+        }
+    } else {
+        quote! {}
+    };
+
     quote! {
 
         impl #ident {
@@ -34,6 +58,10 @@ pub fn get_app_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 panic!("could not match any contract id for {:?}", id)
             }
         }
+
+        #generate_contracts
+
+
     }
 }
 
