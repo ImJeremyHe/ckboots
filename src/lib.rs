@@ -1,6 +1,7 @@
 mod app;
 mod cell_manager;
 mod contract;
+mod generators;
 mod on_chain;
 
 pub use cell_manager::CellManager;
