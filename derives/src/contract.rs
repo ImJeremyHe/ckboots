@@ -119,6 +119,78 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
         }
     };
 
+    let generator = if cfg!(feature = "contract-generator") {
+        let mut cell_deps = vec![];
+        let mut cell_deps_ident = vec![];
+        let mut cell_deps_type_path = vec![];
+        let mut updates = vec![];
+        let mut updates_ident = vec![];
+        let mut updates_type_path = vec![];
+        descriptor.args.iter().for_each(|(ident, arg)| match arg {
+            SigArg::MutRef(t) => {
+                updates.push(t);
+                updates_ident.push(ident.to_string());
+                updates_type_path.push(turn_type_path_into_string(t));
+            }
+            SigArg::UnmutRef(t) => {
+                cell_deps.push(t);
+                cell_deps_ident.push(ident.to_string());
+                cell_deps_type_path.push(turn_type_path_into_string(t));
+            }
+            SigArg::Value(_) => {}
+        });
+        let cell_deps_idx = 0..cell_deps.len();
+        let updates_idx = 0..updates.len();
+        let func_block = func.block.as_ref();
+        quote! {
+            pub fn generate_contract() -> String {
+                let mut _cell_deps: Vec<(&'static str, usize)> = vec![
+                    #((
+                        <#cell_deps as ckboots::OnChain>::_id().unwrap(),
+                        #cell_deps_idx,
+                    )),*
+                ];
+                _cell_deps.sort_by_key(|k| k.0);
+                let _cell_deps_ident: Vec<String> = vec![
+                    #(ckboots::quote!{#cell_deps_ident}.to_string()),*
+                ];
+                let _cell_deps_type_path: Vec<String> = vec![
+                    #(ckboots::quote!{#cell_deps_type_path}.to_string()),*
+                ];
+
+                let _cell_deps_data = _cell_deps.into_iter().map(|(_, idx)| {
+                    let ident = _cell_deps_ident.get(idx).unwrap().clone();
+                    let type_path = _cell_deps_type_path.get(idx).unwrap().clone();
+                    (ident, type_path)
+                }).clone().collect::<Vec<_>>();
+
+                let mut _updates: Vec<(&'static str, usize)> = vec![
+                    #((<#updates as ckboots::OnChain>::_id().unwrap(), #updates_idx)),*
+                ];
+                _updates.sort_by_key(|k| k.0);
+                let _updates_ident: Vec<String> = vec![
+                    #(ckboots::quote!{#updates_ident}.to_string()),*
+                ];
+                let _updates_type_path: Vec<String> = vec![
+                    #(ckboots::quote!{#updates_type_path}.to_string()),*
+                ];
+                let _updates_data = _updates.into_iter().map(|(_, idx)| {
+                    let ident = _updates_ident.get(idx).unwrap().clone();
+                    let type_path = _updates_type_path.get(idx).unwrap().clone();
+                    (ident, type_path)
+                }).clone().collect::<Vec<_>>();
+                let _code = ckboots::quote!{#func_block}.to_string();
+                ckboots::generators::contract::get_contract_code(
+                    &_cell_deps_data,
+                    &_updates_data,
+                    _code,
+                )
+            }
+        }
+    } else {
+        quote! {}
+    };
+
     quote! {
         #[derive(ckboots_derives::OnChain)]
         pub struct #entry {
@@ -134,6 +206,8 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
             #id_func
 
             #run_func
+
+            #generator
         }
     }
 }
@@ -269,4 +343,10 @@ fn parse_sig_type(ty: &Type) -> SigArg {
         }
         _ => todo!(),
     }
+}
+
+fn turn_type_path_into_string(tp: &TypePath) -> String {
+    let ts = quote! {#tp};
+    let s: String = ts.to_string();
+    s
 }

@@ -6,10 +6,13 @@ mod cell_manager;
 mod contract;
 pub mod generators;
 mod on_chain;
+mod prelude;
+mod utils;
 
 pub use cell_manager::CellManager;
 pub use contract::ContractResult;
 pub use on_chain::*;
+pub use prelude::*;
 
 #[cfg(feature = "contract-generator")]
 pub use code_str::__CodeStr__;

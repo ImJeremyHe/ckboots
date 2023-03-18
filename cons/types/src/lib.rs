@@ -10,6 +10,8 @@ pub trait OnChain: Sized {
     fn _from_bytes(bytes: &[u8]) -> Option<Self>;
 
     fn _fixed_size() -> Option<u64>;
+
+    fn _eq(&self, other: &Self) -> bool;
 }
 
 macro_rules! impl_on_chain_for_builtin {
@@ -33,6 +35,10 @@ macro_rules! impl_on_chain_for_builtin {
 
             fn _fixed_size() -> Option<u64> {
                 Some($c)
+            }
+
+            fn _eq(&self, other: &Self) -> bool {
+                self == other
             }
         }
     };
@@ -81,6 +87,22 @@ impl<T: OnChain> OnChain for Vec<T> {
     fn _fixed_size() -> Option<u64> {
         None
     }
+
+    fn _eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+
+        for i in 0..self.len() {
+            let t = self.get(i).unwrap();
+            let o = other.get(i).unwrap();
+            if !t._eq(o) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 impl OnChain for String {
@@ -102,6 +124,10 @@ impl OnChain for String {
     fn _fixed_size() -> Option<u64> {
         None
     }
+
+    fn _eq(&self, other: &Self) -> bool {
+        self == other
+    }
 }
 
 pub fn consume_and_decode<T: OnChain>(bytes: &[u8]) -> Option<(T, &[u8])> {
@@ -116,11 +142,27 @@ pub fn consume_and_decode<T: OnChain>(bytes: &[u8]) -> Option<(T, &[u8])> {
         Some((item, &bytes[end + 8..]))
     }
 }
+
+use ckb_std::ckb_constants::Source;
+use ckb_std::high_level::load_cell_data;
+use ckb_std::syscalls::SysError;
+
+pub fn load_cell_deps_data(idx: usize) -> Result<Vec<u8>, SysError> {
+    load_cell_data(idx, Source::CellDep)
+}
+
+pub fn load_input_data(idx: usize) -> Result<Vec<u8>, SysError> {
+    load_cell_data(idx, Source::Input)
+}
+
+pub fn load_output_data(idx: usize) -> Result<Vec<u8>, SysError> {
+    load_cell_data(idx, Source::Output)
+}
 use crate as ckboots ; pub struct Frog
 { pub physical : u8, pub traval_cnt : u8, } impl ckboots :: OnChain for Frog
 {
     fn _capacity(& self) -> u64
-    { 0u64 + self.physical._capacity() + self.traval_cnt._capacity() } fn
+    { self.physical._capacity() + self.traval_cnt._capacity() } fn
     _to_bytes(& self) -> Vec < u8 >
     {
         let mut result = Vec :: with_capacity(self._capacity() as usize) ;
@@ -141,7 +183,12 @@ use crate as ckboots ; pub struct Frog
         Some(Self { physical, traval_cnt, })
     } fn _fixed_size() -> Option < u64 >
     {
-        let size = 0u64 + < u8 as ckboots :: OnChain > :: _fixed_size() ? + <
-        u8 as ckboots :: OnChain > :: _fixed_size() ? ; Some(size)
-    } fn _id() -> Option < & 'static str > { Some("frog") }
+        let size = < u8 as ckboots :: OnChain > :: _fixed_size() ? + < u8 as
+        ckboots :: OnChain > :: _fixed_size() ? ; Some(size)
+    } fn _id() -> Option < & 'static str > { Some("frog") } fn
+    _eq(& self, other : & Self) -> bool
+    {
+        if! self.physical._eq(& other.physical) { return false ; } if!
+        self.traval_cnt._eq(& other.traval_cnt) { return false ; } true
+    }
 }

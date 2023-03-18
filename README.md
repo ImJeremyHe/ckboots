@@ -62,7 +62,6 @@ pub fn complete_mission_1(hero: &mut Hero){
     let mut hero = hero;
     hero.exp.level += 1;
     hero.next_exp = 1000;
-    hero
 }
 ```
 

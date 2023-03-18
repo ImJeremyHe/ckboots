@@ -36,11 +36,21 @@ pub fn get_app_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
             ];
             ckboots::generators::contract::write_types("cons", type_strs);
         };
+
+        let contract = container.contracts.iter().map(|c| {
+            quote! {
+                let _id = #c::_id();
+                let _code = #c::generate_contract();
+                ckboots::generators::contract::write_contract("cons", _code, _id);
+
+            }
+        });
         quote! {
             #[test]
             pub fn generate_contracts() {
                 use ckboots::__CodeStr__;
                 #content
+                #(#contract)*
             }
 
         }

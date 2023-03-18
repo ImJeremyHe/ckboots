@@ -63,7 +63,7 @@ fn get_struct_impl_block(
     quote! {
         impl #impl_generics ckboots::OnChain for #ident #type_generics #where_clause{
             fn _capacity(&self) -> u64 {
-                0u64 #(+ self.#field_idents._capacity())*
+                #(self.#field_idents._capacity())+*
             }
 
             fn _to_bytes(&self) -> Vec<u8> {
@@ -87,12 +87,19 @@ fn get_struct_impl_block(
             }
 
             fn _fixed_size() -> Option<u64> {
-                let size = 0u64 #(+ <#field_types as ckboots::OnChain>::_fixed_size()?)*;
+                let size = #(<#field_types as ckboots::OnChain>::_fixed_size()?)+*;
                 Some(size)
             }
 
             fn _id() -> Option<&'static str> {
                 #id_tokens
+            }
+
+            fn _eq(&self, other: &Self) -> bool {
+                #(if !self.#field_idents._eq(&other.#field_idents) {
+                    return false;
+                })*
+                true
             }
 
         }
@@ -156,7 +163,7 @@ fn get_enum_impl_block(
         }
     });
 
-    let capacity_branch = variant_field_index.map(|(_, f, v)| {
+    let capacity_branch = variant_field_index.clone().map(|(_, f, v)| {
         if f.is_none() {
             quote! {
                 Self::#v => 0
@@ -164,6 +171,18 @@ fn get_enum_impl_block(
         } else {
             quote! {
                 Self::#v(s) => s._capacity()
+            }
+        }
+    });
+
+    let eq_branch = variant_field_index.map(|(_, f, v)| {
+        if f.is_none() {
+            quote! {
+                (Self::#v, Self::#v) => true
+            }
+        } else {
+            quote! {
+                (Self::#v(i1), Self::#v(i2)) => i1._eq(i2)
             }
         }
     });
@@ -203,6 +222,13 @@ fn get_enum_impl_block(
 
             fn _fixed_size() -> Option<u64> {
                 None
+            }
+
+            fn _eq(&self, other: &Self) -> bool {
+                match (self, other) {
+                    #(#eq_branch,)*
+                    _ => false,
+                }
             }
         }
     }

@@ -13,6 +13,11 @@ ckb-sdk = "2.4.0"
 ckb-types = "0.106.0"
 secp256k1 = "0.24"
 
+quote = "1.0.15"
+ckb-std = "0.10.0"
+proc-macro2 = "1.0.36"
+syn = {version = "1.0.86", features = ["full"]}
+
 ckboots-derives = { path = "./derives", version = "0.1.0" }
 
 [features]
@@ -22,4 +27,5 @@ contract-generator = []
 members = [
     "examples/frog-travel",
     "cons/types",
+    # "cons/travel",
 ]

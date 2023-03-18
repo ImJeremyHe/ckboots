@@ -10,6 +10,8 @@ pub trait OnChain: Sized {
     fn _from_bytes(bytes: &[u8]) -> Option<Self>;
 
     fn _fixed_size() -> Option<u64>;
+
+    fn _eq(&self, other: &Self) -> bool;
 }
 
 macro_rules! impl_on_chain_for_builtin {
@@ -33,6 +35,10 @@ macro_rules! impl_on_chain_for_builtin {
 
             fn _fixed_size() -> Option<u64> {
                 Some($c)
+            }
+
+            fn _eq(&self, other: &Self) -> bool {
+                self == other
             }
         }
     };
@@ -81,6 +87,22 @@ impl<T: OnChain> OnChain for Vec<T> {
     fn _fixed_size() -> Option<u64> {
         None
     }
+
+    fn _eq(&self, other: &Self) -> bool {
+        if self.len() != other.len() {
+            return false;
+        }
+
+        for i in 0..self.len() {
+            let t = self.get(i).unwrap();
+            let o = other.get(i).unwrap();
+            if !t._eq(o) {
+                return false;
+            }
+        }
+
+        return true;
+    }
 }
 
 impl OnChain for String {
@@ -101,6 +123,10 @@ impl OnChain for String {
 
     fn _fixed_size() -> Option<u64> {
         None
+    }
+
+    fn _eq(&self, other: &Self) -> bool {
+        self == other
     }
 }
 
