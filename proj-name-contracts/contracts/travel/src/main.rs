@@ -6,12 +6,7 @@
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 
-macro_rules! debug {
-    ($fmt:literal $(,$args:expr)* $(,)?) => {
-        #[cfg(feature = "debugging")]
-        ckb_std::syscalls::debug(alloc::format!($fmt $(,$args)*));
-    };
-}
+#[allow(unused_imports)]
 
 mod entry;
 mod error;

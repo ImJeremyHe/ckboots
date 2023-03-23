@@ -79,12 +79,7 @@ pub fn get_main_content() -> &'static str {
 #![feature(alloc_error_handler)]
 #![feature(panic_info_message)]
 
-macro_rules! debug {
-    ($fmt:literal $(,$args:expr)* $(,)?) => {
-        #[cfg(feature = "debugging")]
-        ckb_std::syscalls::debug(alloc::format!($fmt $(,$args)*));
-    };
-}
+#[allow(unused_imports)]
 
 mod entry;
 mod error;
@@ -116,8 +111,17 @@ pub fn get_contract_code(
     let content = format!("{cell_deps}\n\n{input}\n\n{code}\n\n{output}\n");
 
     let prelude = format!(
-        r#"
-pub fn main() -> Result<()> {{
+r#"
+// Import from `core` instead of from `std` since we are in no-std mode
+use core::result::Result;
+        
+// Import heap related library from `alloc`
+// https://doc.rust-lang.org/alloc/index.html
+use alloc::{{vec, vec::Vec}};
+use crate::error::Error;
+use types::OnChain;
+
+pub fn main() -> Result<(), Error> {{
     {content}
     Ok(())
 }}
@@ -137,7 +141,7 @@ fn load_cell_deps(data: &[(String, String)]) -> String {
                 let s = format!(
                     "
 let bytes = types::load_cell_deps_data({idx})?;
-let {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes)?;
+let {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
 "
                 );
                 prev.push_str(&s);
@@ -156,7 +160,7 @@ fn load_input(data: &[(String, String)]) -> String {
                 let s = format!(
                     "
 let bytes = types::load_input_data({idx})?;
-let {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes)?;
+let mut {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
 "
                 );
                 prev.push_str(&s);
@@ -175,9 +179,9 @@ fn load_output(data: &[(String, String)]) -> String {
                 let s = format!(
                     "
 let bytes = types::load_output_data({idx})?;
-let {ident}_output = <types::{type_path} as types::OnChain>::_from_bytes(&bytes)?;
-if !{ident}._eq({ident}_output) {{
-    return crate::error::Error::NotEqual;
+let {ident}_output = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
+if !{ident}._eq(&{ident}_output) {{
+    return Err(crate::error::Error::NotEqual);
 }}
 "
                 );

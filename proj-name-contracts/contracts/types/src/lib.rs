@@ -1,3 +1,22 @@
+#![no_std]
+#[allow(unused_imports)]
+use core::option::Option::Some;
+use core::result::Result;
+use core::option::Option;
+use core::option::Option::None;
+use core::marker::Sized;
+use core::convert::Into;
+use core::convert::TryInto;
+use core::clone::Clone;
+use core::iter::Extend;
+use core::iter::Iterator;
+
+use alloc::vec;
+use alloc::vec::Vec;
+
+#[macro_use]
+extern crate alloc;
+
 pub trait OnChain: Sized {
     fn _capacity(&self) -> u64;
 
@@ -62,7 +81,7 @@ impl<T: OnChain> OnChain for Vec<T> {
     }
 
     fn _to_bytes(&self) -> Vec<u8> {
-        let mut total_capacity = 0;
+        let mut total_capacity: u64 = 0;
         let mut bytes = vec![];
         self.iter().for_each(|element| {
             total_capacity += element._capacity();
@@ -105,30 +124,30 @@ impl<T: OnChain> OnChain for Vec<T> {
     }
 }
 
-impl OnChain for String {
-    fn _capacity(&self) -> u64 {
-        self.as_bytes().len() as u64 + 8
-    }
+// impl OnChain for String {
+//     fn _capacity(&self) -> u64 {
+//         self.as_bytes().len() as u64 + 8
+//     }
 
-    fn _to_bytes(&self) -> Vec<u8> {
-        let bytes = self.as_bytes().to_vec();
-        let mut prefix = bytes.len().to_le_bytes().to_vec();
-        prefix.extend(bytes);
-        prefix
-    }
+//     fn _to_bytes(&self) -> Vec<u8> {
+//         let bytes = self.as_bytes().to_vec();
+//         let mut prefix = bytes.len().to_le_bytes().to_vec();
+//         prefix.extend(bytes);
+//         prefix
+//     }
 
-    fn _from_bytes(bytes: &[u8]) -> Option<Self> {
-        String::from_utf8(bytes.to_vec()).ok()
-    }
+//     fn _from_bytes(bytes: &[u8]) -> Option<Self> {
+//         String::from_utf8(bytes.to_vec()).ok()
+//     }
 
-    fn _fixed_size() -> Option<u64> {
-        None
-    }
+//     fn _fixed_size() -> Option<u64> {
+//         None
+//     }
 
-    fn _eq(&self, other: &Self) -> bool {
-        self == other
-    }
-}
+//     fn _eq(&self, other: &Self) -> bool {
+//         self == other
+//     }
+// }
 
 pub fn consume_and_decode<T: OnChain>(bytes: &[u8]) -> Option<(T, &[u8])> {
     if let Some(capacity) = T::_fixed_size() {
@@ -177,9 +196,9 @@ use crate as ckboots ; pub struct Frog
         }
     } fn _from_bytes(bytes : & [u8]) -> Option < Self >
     {
-        let mut left = bytes ; let(physical, left) = ckboots ::
-        consume_and_decode :: < u8 > (left) ? ; let(traval_cnt, left) =
-        ckboots :: consume_and_decode :: < u8 > (left) ? ;
+        let left = bytes ; let(physical, left) = ckboots :: consume_and_decode
+        :: < u8 > (left) ? ; let(traval_cnt, left) = ckboots ::
+        consume_and_decode :: < u8 > (left) ? ;
         Some(Self { physical, traval_cnt, })
     } fn _fixed_size() -> Option < u64 >
     {

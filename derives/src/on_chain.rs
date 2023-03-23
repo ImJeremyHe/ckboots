@@ -79,7 +79,7 @@ fn get_struct_impl_block(
             }
 
             fn _from_bytes(bytes: &[u8]) -> Option<Self> {
-                let mut left = bytes;
+                let left = bytes;
                 #(let (#field_idents, left) = ckboots::consume_and_decode::<#field_types>(left)?;)*
                 Some(Self {
                     #(#field_idents,)*

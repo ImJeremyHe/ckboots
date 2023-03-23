@@ -1,5 +1,7 @@
 pub fn write_types(save_path: &str, types: Vec<&str>) {
-    let mut content = include_str!("../../on_chain.rs").to_string();
+    let mut content = get_prelude().to_string();
+    let on_chain = include_str!("../../on_chain.rs");
+    content.push_str(on_chain);
     content.push_str(get_utils());
     types.into_iter().for_each(|s| {
         content.push_str(s);
@@ -48,5 +50,28 @@ pub fn load_input_data(idx: usize) -> Result<Vec<u8>, SysError> {
 pub fn load_output_data(idx: usize) -> Result<Vec<u8>, SysError> {
     load_cell_data(idx, Source::Output)
 }
+"#
+}
+
+fn get_prelude() -> &'static str {
+    r#"#![no_std]
+#[allow(unused_imports)]
+use core::option::Option::Some;
+use core::result::Result;
+use core::option::Option;
+use core::option::Option::None;
+use core::marker::Sized;
+use core::convert::Into;
+use core::convert::TryInto;
+use core::clone::Clone;
+use core::iter::Extend;
+use core::iter::Iterator;
+
+use alloc::vec;
+use alloc::vec::Vec;
+
+#[macro_use]
+extern crate alloc;
+
 "#
 }
