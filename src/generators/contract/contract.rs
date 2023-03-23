@@ -103,18 +103,20 @@ fn program_entry(_argc: u64, _argv: *const *const u8) -> i8 {
 pub fn get_contract_code(
     cell_deps: &[(String, String)],
     inputs: &[(String, String)],
+    user_input: Option<(String, String)>,
     code: String,
 ) -> String {
     let cell_deps = load_cell_deps(cell_deps);
     let input = load_input(inputs);
     let output = load_output(inputs);
-    let content = format!("{cell_deps}\n\n{input}\n\n{code}\n\n{output}\n");
+    let user_input = load_user_input(user_input);
+    let content = format!("{cell_deps}\n\n{user_input}\n\n{input}\n\n{code}\n\n{output}\n");
 
     let prelude = format!(
-r#"
+        r#"
 // Import from `core` instead of from `std` since we are in no-std mode
 use core::result::Result;
-        
+
 // Import heap related library from `alloc`
 // https://doc.rust-lang.org/alloc/index.html
 use alloc::{{vec, vec::Vec}};
@@ -148,6 +150,20 @@ let {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(
                 prev
             });
     string
+}
+
+fn load_user_input(data: Option<(String, String)>) -> String {
+    if data.is_none() {
+        return String::from("");
+    }
+    let data = data.unwrap();
+    let ident = data.0.trim_matches('"');
+    let type_path = data.1.trim_matches('"');
+
+    format!("
+let bytes = types::load_user_input();
+let {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
+")
 }
 
 fn load_input(data: &[(String, String)]) -> String {

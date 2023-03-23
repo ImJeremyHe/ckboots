@@ -126,6 +126,7 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
         let mut updates = vec![];
         let mut updates_ident = vec![];
         let mut updates_type_path = vec![];
+        let mut user_input: Option<(String, String)> = None;
         descriptor.args.iter().for_each(|(ident, arg)| match arg {
             SigArg::MutRef(t) => {
                 updates.push(t);
@@ -137,8 +138,21 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
                 cell_deps_ident.push(ident.to_string());
                 cell_deps_type_path.push(turn_type_path_into_string(t));
             }
-            SigArg::Value(_) => {}
+            SigArg::Value(t) => {
+                let ident = ident.to_string();
+                let type_path = turn_type_path_into_string(t);
+                user_input = Some((ident, type_path));
+            }
         });
+        let user_input_token = if let Some((ident, ty)) = user_input {
+            quote! {
+                Some((#ident, #ty))
+            }
+        } else {
+            quote! {
+                None
+            }
+        };
         let cell_deps_idx = 0..cell_deps.len();
         let updates_idx = 0..updates.len();
         let func_block = func.block.as_ref();
@@ -179,10 +193,13 @@ pub fn build_contract_entry(attr: &AttributeArgs, func: &ItemFn) -> proc_macro2:
                     let type_path = _updates_type_path.get(idx).unwrap().clone();
                     (ident, type_path)
                 }).clone().collect::<Vec<_>>();
+
+                let _user_input: Option<(String, String)> = #user_input_token;
                 let _code = ckboots::quote!{#func_block}.to_string();
                 ckboots::generators::contract::get_contract_code(
                     &_cell_deps_data,
                     &_updates_data,
+                    _user_input,
                     _code,
                 )
             }

@@ -37,7 +37,9 @@ pub fn get_utils() -> &'static str {
     r#"
 use ckb_std::ckb_constants::Source;
 use ckb_std::high_level::load_cell_data;
+use ckb_std::high_level::load_witness_args;
 use ckb_std::syscalls::SysError;
+use ckb_std::prelude::Entity;
 
 pub fn load_cell_deps_data(idx: usize) -> Result<Vec<u8>, SysError> {
     load_cell_data(idx, Source::CellDep)
@@ -49,6 +51,15 @@ pub fn load_input_data(idx: usize) -> Result<Vec<u8>, SysError> {
 
 pub fn load_output_data(idx: usize) -> Result<Vec<u8>, SysError> {
     load_cell_data(idx, Source::Output)
+}
+
+pub fn load_user_input() -> Result<Vec<u8>, SysError> {
+    let witness_arg = load_witness_args(0, Source::Input)?;
+    if let Some(b) = witness_arg.input_type().to_opt() {
+        Ok(b.as_slice().to_vec())
+    } else {
+        Ok(vec![])
+    }
 }
 "#
 }

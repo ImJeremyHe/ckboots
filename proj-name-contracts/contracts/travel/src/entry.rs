@@ -1,7 +1,7 @@
 
 // Import from `core` instead of from `std` since we are in no-std mode
 use core::result::Result;
-        
+
 // Import heap related library from `alloc`
 // https://doc.rust-lang.org/alloc/index.html
 use alloc::{vec, vec::Vec};
@@ -10,6 +10,8 @@ use types::OnChain;
 
 pub fn main() -> Result<(), Error> {
     
+
+
 
 
 let bytes = types::load_input_data(0)?;
