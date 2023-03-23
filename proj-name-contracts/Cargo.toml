@@ -1,0 +1,10 @@
+
+[workspace]
+members = ["contracts/types","contracts/travel",]
+
+[profile.release]
+overflow-checks = true
+opt-level = 's'
+lto = false
+codegen-units = 1
+panic = 'abort'

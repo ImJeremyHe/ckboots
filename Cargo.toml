@@ -26,6 +26,4 @@ contract-generator = []
 [workspace]
 members = [
     "examples/frog-travel",
-    "cons/types",
-    # "cons/travel",
 ]
