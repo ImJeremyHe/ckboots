@@ -1,5 +1,3 @@
-#[cfg(feature = "contract-generator")]
-mod _utils;
 mod capsule;
 mod contract;
 mod entry;

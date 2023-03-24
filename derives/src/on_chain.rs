@@ -1,7 +1,14 @@
+use proc_macro2::Group;
+use proc_macro2::Span;
+use proc_macro2::TokenStream;
+use proc_macro2::TokenTree;
 use quote::quote;
+use syn::parse;
+use syn::parse::Parse;
 use syn::LitStr;
 use syn::Meta::List;
 use syn::Meta::NameValue;
+use syn::Meta::Path;
 use syn::{DataEnum, DataStruct, DeriveInput, NestedMeta};
 
 pub fn get_on_chain_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
@@ -60,6 +67,43 @@ fn get_struct_impl_block(
     } else {
         quote!(None)
     };
+
+    let defaults = data.fields.iter().map(|f| {
+        let ident = f.ident.as_ref().expect("");
+        let ty = &f.ty;
+        let mut tokenstream: Option<TokenStream> = None;
+        f.attrs
+            .iter()
+            .flat_map(|attr| {
+                if !attr.path.is_ident("onchain") {
+                    return Err(());
+                }
+                match attr.parse_meta() {
+                    Ok(List(meta)) => Ok(meta.nested.into_iter().collect::<Vec<_>>()),
+                    _ => Err(()),
+                }
+            })
+            .flatten()
+            .for_each(|meta| match meta {
+                NestedMeta::Meta(NameValue(nv)) => {
+                    if nv.path.is_ident("default") {
+                        let ts = lit_to_tokenstream(nv.lit);
+                        tokenstream = Some(ts);
+                    }
+                }
+                _ => panic!("#[onchain(default = <value>)]"),
+            });
+        if let Some(ts) = tokenstream {
+            quote! {
+                #ident: #ts,
+            }
+        } else {
+            quote! {
+                #ident: <#ty as ckboots::OnChain>::_default(),
+            }
+        }
+    });
+
     quote! {
         impl #impl_generics ckboots::OnChain for #ident #type_generics #where_clause{
             fn _capacity(&self) -> u64 {
@@ -102,6 +146,21 @@ fn get_struct_impl_block(
                 true
             }
 
+            fn _default() -> Self {
+                Self {
+                    #(#defaults)*
+                }
+            }
+        }
+
+        impl #impl_generics #ident #type_generics #where_clause {
+            pub fn onchain_new(
+                #(#field_idents: #field_types),*
+            ) -> Self {
+                Self {
+                    #(#field_idents),*
+                }
+            }
         }
     }
 }
@@ -175,7 +234,7 @@ fn get_enum_impl_block(
         }
     });
 
-    let eq_branch = variant_field_index.map(|(_, f, v)| {
+    let eq_branch = variant_field_index.clone().map(|(_, f, v)| {
         if f.is_none() {
             quote! {
                 (Self::#v, Self::#v) => true
@@ -186,6 +245,79 @@ fn get_enum_impl_block(
             }
         }
     });
+
+    let mut default_ident: Option<&syn::Ident> = None;
+    let mut default_ty: Option<&syn::Type> = None;
+    let mut default_value: Option<TokenStream> = None;
+    data.variants.iter().for_each(|v| {
+        let ident = &v.ident;
+        let f = v.fields.iter().next();
+        let _ = &v
+            .attrs
+            .iter()
+            .flat_map(|attr| {
+                if !attr.path.is_ident("onchain") {
+                    return Err(());
+                }
+                match attr.parse_meta() {
+                    Ok(List(meta)) => Ok(meta.nested.into_iter().collect::<Vec<_>>()),
+                    _ => Err(()),
+                }
+            })
+            .flatten()
+            .for_each(|meta| match meta {
+                NestedMeta::Meta(NameValue(nv)) => {
+                    if nv.path.is_ident("default") {
+                        let ts = lit_to_tokenstream(nv.lit);
+                        if f.is_none() {
+                            panic!("maybe #[onchain(default)]")
+                        }
+                        if default_ident.is_none() {
+                            default_ident = Some(ident);
+                            default_value = Some(ts);
+                            default_ty = Some(&f.as_ref().unwrap().ty);
+                        } else {
+                            panic!("should only one #[onchain(default)]")
+                        }
+                    }
+                }
+                NestedMeta::Meta(Path(path)) => {
+                    if path.is_ident("default") {
+                        if default_ident.is_some() {
+                            panic!("should only one #[onchain(default)]")
+                        }
+                        default_ident = Some(ident);
+                        if let Some(_) = f {
+                            default_ty = Some(&f.as_ref().unwrap().ty);
+                        }
+                    }
+                }
+                _ => todo!(),
+            });
+    });
+
+    let default_func = {
+        if default_ident.is_none() {
+            panic!("should use #[onchain(default)] to specify the default variant")
+        }
+        let ident = default_ident.unwrap();
+        let branch = match (default_ty, default_value) {
+            (None, None) => quote! {
+                Self::#ident
+            },
+            (Some(ty), None) => quote! {
+                Self::#ident(<#ty as ckboots::OnChain>::_default())
+            },
+            (_, Some(ts)) => quote! {
+                Self::#ident(#ts)
+            },
+        };
+        quote! {
+            fn _default() -> Self {
+                #branch
+            }
+        }
+    };
 
     quote! {
         impl #impl_generics ckboots::OnChain for #ident #type_generics #where_clause{
@@ -230,6 +362,65 @@ fn get_enum_impl_block(
                     _ => false,
                 }
             }
+
+            #default_func
         }
+    }
+}
+
+fn respan(stream: TokenStream, span: Span) -> TokenStream {
+    stream
+        .into_iter()
+        .map(|token| respan_token(token, span))
+        .collect()
+}
+
+fn respan_token(mut token: TokenTree, span: Span) -> TokenTree {
+    if let TokenTree::Group(g) = &mut token {
+        *g = Group::new(g.delimiter(), respan(g.stream(), span));
+    }
+    token.set_span(span);
+    token
+}
+
+pub fn parse_lit_into_expr(lit: &syn::LitStr) -> Result<syn::Expr, ()> {
+    match parse_lit_str(lit) {
+        Ok(r) => Ok(r),
+        Err(_) => {
+            let _ = format!("failed to parse path: {:?}", lit.value());
+            Err(())
+            // panic!("{:?}", msg)
+        }
+    }
+}
+
+pub fn parse_lit_str<T>(s: &syn::LitStr) -> parse::Result<T>
+where
+    T: Parse,
+{
+    let tokens = spanned_tokens(s)?;
+    syn::parse2(tokens)
+}
+
+fn spanned_tokens(s: &syn::LitStr) -> parse::Result<TokenStream> {
+    let stream = syn::parse_str(&s.value())?;
+    Ok(respan(stream, s.span()))
+}
+
+fn lit_to_tokenstream(lit: syn::Lit) -> TokenStream {
+    match lit {
+        syn::Lit::Str(lit_str) => {
+            let expr = parse_lit_into_expr(&lit_str).expect("parse lit into expr failed");
+            quote! {
+                #expr
+            }
+        }
+        syn::Lit::Int(i) => quote! {#i},
+        syn::Lit::Float(f) => quote! {#f},
+        syn::Lit::Bool(b) => quote!(#b),
+        syn::Lit::ByteStr(_) => todo!(),
+        syn::Lit::Byte(_) => todo!(),
+        syn::Lit::Char(_) => todo!(),
+        syn::Lit::Verbatim(_) => todo!(),
     }
 }

@@ -12,6 +12,8 @@ pub trait OnChain: Sized {
     fn _fixed_size() -> Option<u64>;
 
     fn _eq(&self, other: &Self) -> bool;
+
+    fn _default() -> Self;
 }
 
 macro_rules! impl_on_chain_for_builtin {
@@ -39,6 +41,10 @@ macro_rules! impl_on_chain_for_builtin {
 
             fn _eq(&self, other: &Self) -> bool {
                 self == other
+            }
+
+            fn _default() -> Self {
+                0
             }
         }
     };
@@ -102,6 +108,10 @@ impl<T: OnChain> OnChain for Vec<T> {
         }
 
         return true;
+    }
+
+    fn _default() -> Self {
+        vec![]
     }
 }
 
