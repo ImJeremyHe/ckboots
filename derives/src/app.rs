@@ -59,12 +59,36 @@ pub fn get_app_impl_block(input: DeriveInput) -> proc_macro2::TokenStream {
                 ckboots::generators::contract::write_capsule("proj-name", &_ids);
             }
         };
+        let entry = {
+            let ids = container.types.iter().map(|p| {
+                quote! {
+                    <#p as ckboots::OnChain>::_id()
+                }
+            });
+            let ids_idx = 0..container.types.len();
+            let type_paths = container.types.iter().map(|p| quote! {#p});
+            quote! {
+                let mut _type_ids_idx:Vec<(&'static str, usize)> = vec![
+                    #((#ids.unwrap(), #ids_idx)),*
+                ];
+                _type_ids_idx.sort_by_key(|k| k.0);
+                let _type_path: Vec<String> = vec![
+                    #(ckboots::quote!{#type_paths}.to_string()),*
+                ];
+                let data = _type_ids_idx.into_iter().map(|(id, idx)| {
+                    let p = _type_path.get(idx).unwrap().to_string();
+                    (id.to_string(), p)
+                }).collect::<Vec<(String, String)>>();
+                ckboots::generators::contract::write_entry("proj-name-contracts/contracts", &data);
+            }
+        };
         quote! {
             #[test]
             pub fn generate_contracts() {
                 use ckboots::__CodeStr__;
                 #capsule
                 #types
+                #entry
                 #(#contract)*
             }
 

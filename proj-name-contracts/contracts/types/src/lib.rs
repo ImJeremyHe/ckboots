@@ -31,6 +31,8 @@ pub trait OnChain: Sized {
     fn _fixed_size() -> Option<u64>;
 
     fn _eq(&self, other: &Self) -> bool;
+
+    fn _default() -> Self;
 }
 
 macro_rules! impl_on_chain_for_builtin {
@@ -58,6 +60,10 @@ macro_rules! impl_on_chain_for_builtin {
 
             fn _eq(&self, other: &Self) -> bool {
                 self == other
+            }
+
+            fn _default() -> Self {
+                0
             }
         }
     };
@@ -122,6 +128,10 @@ impl<T: OnChain> OnChain for Vec<T> {
 
         return true;
     }
+
+    fn _default() -> Self {
+        vec![]
+    }
 }
 
 // impl OnChain for String {
@@ -164,9 +174,11 @@ pub fn consume_and_decode<T: OnChain>(bytes: &[u8]) -> Option<(T, &[u8])> {
 
 use ckb_std::ckb_constants::Source;
 use ckb_std::high_level::load_cell_data;
+use ckb_std::high_level::exec_cell;
 use ckb_std::high_level::load_witness_args;
 use ckb_std::syscalls::SysError;
 use ckb_std::prelude::Entity;
+use ckb_std::core::ScriptHashType;
 
 pub fn load_cell_deps_data(idx: usize) -> Result<Vec<u8>, SysError> {
     load_cell_data(idx, Source::CellDep)
@@ -187,6 +199,21 @@ pub fn load_user_input() -> Result<Vec<u8>, SysError> {
     } else {
         Ok(vec![])
     }
+}
+
+pub fn load_exec_script() -> Result<Vec<u8>, SysError> {
+    let witness_arg = load_witness_args(0, Source::Input)?:
+    if let Some(b) = witness_arg.output_type().to_opt() {
+        Ok(b.as_slice().to_vec())
+    } else {
+        Ok(vec![])
+    }
+}
+
+pub fn exec_script(code_hash: &[u8]) -> Result<u64, SysError> {
+    let argv = vec![];
+    exec_cell(code_hash, ScriptHashType::Type, 0, 0, &argv)?;
+    Ok(())
 }
 use crate as ckboots ; pub struct Frog
 { pub physical : u8, pub traval_cnt : u8, } impl ckboots :: OnChain for Frog
@@ -220,5 +247,16 @@ use crate as ckboots ; pub struct Frog
     {
         if! self.physical._eq(& other.physical) { return false ; } if!
         self.traval_cnt._eq(& other.traval_cnt) { return false ; } true
+    } fn _default() -> Self
+    {
+        Self
+        {
+            physical : 100, traval_cnt : < u8 as ckboots :: OnChain > ::
+            _default(),
+        }
     }
+} impl Frog
+{
+    pub fn onchain_new(physical : u8, traval_cnt : u8) -> Self
+    { Self { physical, traval_cnt } }
 }

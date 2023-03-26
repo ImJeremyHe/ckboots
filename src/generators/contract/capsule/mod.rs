@@ -22,6 +22,10 @@ pub fn write_capsule(proj_name: &str, contracts: &[&'static str]) {
 fn get_capsule_toml(contracts: &[&str]) -> String {
     let prelude = r#"version = "0.9.0"
 deployment = "deployment.toml"
+
+[[contract]]
+name = "_entry"
+template_type = "Rust"
 "#;
     contracts
         .into_iter()
@@ -38,14 +42,14 @@ template_type = "Rust"
 }
 
 fn get_cargo_toml(contracts: &[&str]) -> String {
-    let members =
-        contracts
-            .into_iter()
-            .fold(String::from(r#""contracts/types","#), |mut prev, c| {
-                let member = format!(r#""contracts/{}","#, c);
-                prev.push_str(&member);
-                prev
-            });
+    let members = contracts.into_iter().fold(
+        String::from(r#""contracts/types", "contracts/_entry","#),
+        |mut prev, c| {
+            let member = format!(r#""contracts/{}","#, c);
+            prev.push_str(&member);
+            prev
+        },
+    );
     format!(
         r#"
 [workspace]

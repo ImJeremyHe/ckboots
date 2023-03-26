@@ -1,1 +1,137 @@
+pub fn write_entry(save_path: &str, inputs: &[(String, String)]) {
+    let p = env!("CARGO_MANIFEST_DIR");
+    let target = std::path::Path::new(p);
+    let contract_dir = target.join(save_path).join("_entry");
 
+    let _ = std::fs::remove_dir_all(contract_dir.clone());
+    std::fs::create_dir_all(contract_dir.clone()).unwrap();
+
+    std::fs::write(
+        contract_dir.join("Cargo.toml"),
+        r#"[package]
+name = "_entry"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+types = {version = "*", path = "../types"}
+ckb-std = "0.10.0"
+"#,
+    )
+    .unwrap();
+
+    let src_dir = contract_dir.join("src");
+    std::fs::create_dir_all(src_dir.clone()).unwrap();
+
+    std::fs::write(src_dir.join("main.rs"), get_main_content()).unwrap();
+    std::fs::write(src_dir.join("error.rs"), get_error_code()).unwrap();
+    std::fs::write(src_dir.join("entry.rs"), get_contract_code(inputs)).unwrap();
+}
+
+fn get_contract_code(inputs: &[(String, String)]) -> String {
+    let output = load_output(inputs);
+    let s = format!(
+        r#"
+// Import from `core` instead of from `std` since we are in no-std mode
+use core::result::Result;
+
+// Import heap related library from `alloc`
+// https://doc.rust-lang.org/alloc/index.html
+use alloc::{{vec, vec::Vec}};
+use crate::error::Error;
+use types::OnChain;
+
+pub fn main() -> Result<(), Error> {{
+    let script = types::load_exec_script()?;
+    if script.len() == 0 {{
+        {output}
+    }} else {{
+        types::exec_script(&script)?;
+    }}
+    Ok(())
+}}
+"#
+    );
+    s
+}
+
+fn load_output(data: &[(String, String)]) -> String {
+    let string =
+        data.into_iter()
+            .enumerate()
+            .fold("".to_string(), |mut prev, (idx, (ident, type_path))| {
+                let ident = ident.trim_matches('"');
+                let type_path = type_path.trim_matches('"');
+                let s = format!("
+let bytes = types::load_output_data({idx});
+let {ident}_output = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
+let _default = <types::{type_path} as types::OnChain>::_default();
+if !{ident}_output.eq(&{ident}_output) {{
+    return Err(crate::error::Error::NotEqual);
+}}
+");
+        prev.push_str(&s);
+        prev
+            });
+    string
+}
+
+fn get_error_code() -> &'static str {
+    r#"
+use ckb_std::error::SysError;
+
+/// Error
+#[repr(i8)]
+pub enum Error {
+    IndexOutOfBound = 1,
+    ItemMissing,
+    LengthNotEnough,
+    Encoding,
+    NotEqual,
+}
+
+impl From<SysError> for Error {
+    fn from(err: SysError) -> Self {
+        use SysError::*;
+        match err {
+            IndexOutOfBound => Self::IndexOutOfBound,
+            ItemMissing => Self::ItemMissing,
+            LengthNotEnough(_) => Self::LengthNotEnough,
+            Encoding => Self::Encoding,
+            Unknown(err_code) => panic!("unexpected sys error {}", err_code),
+        }
+    }
+}
+
+    "#
+}
+
+fn get_main_content() -> &'static str {
+    r##"
+#![no_std]
+#![no_main]
+#![feature(asm_sym)]
+#![feature(lang_items)]
+#![feature(alloc_error_handler)]
+#![feature(panic_info_message)]
+
+#[allow(unused_imports)]
+
+mod entry;
+mod error;
+
+use ckb_std::default_alloc;
+use core::arch::asm;
+
+ckb_std::entry!(program_entry);
+default_alloc!();
+
+fn program_entry(_argc: u64, _argv: *const *const u8) -> i8 {
+    match entry::main() {
+        Ok(_) => 0,
+        Err(err) => err as i8,
+    }
+}
+
+"##
+}

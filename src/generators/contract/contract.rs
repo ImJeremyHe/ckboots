@@ -40,7 +40,7 @@ channel = "nightly-2022-08-01"
     std::fs::write(src_dir.join("main.rs"), get_main_content()).unwrap();
 }
 
-pub fn get_error_code() -> &'static str {
+fn get_error_code() -> &'static str {
     r#"
 use ckb_std::error::SysError;
 
@@ -70,7 +70,7 @@ impl From<SysError> for Error {
     "#
 }
 
-pub fn get_main_content() -> &'static str {
+fn get_main_content() -> &'static str {
     r##"
 #![no_std]
 #![no_main]

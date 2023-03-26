@@ -1,5 +1,9 @@
 version = "0.9.0"
 deployment = "deployment.toml"
+
+[[contract]]
+name = "_entry"
+template_type = "Rust"
 [[contracts]]
 name = "travel"
 template_type = "Rust"

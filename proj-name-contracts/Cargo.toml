@@ -1,6 +1,6 @@
 
 [workspace]
-members = ["contracts/types","contracts/travel",]
+members = ["contracts/types", "contracts/_entry","contracts/travel",]
 
 [profile.release]
 overflow-checks = true
