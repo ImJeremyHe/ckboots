@@ -180,7 +180,7 @@ fn load_input(data: &[(String, String)]) -> String {
                     "
 let bytes = types::load_input_data({idx})?;
 let wrapper = <types::OnChainWrapper as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
-let input_id = wrapper.id;
+let input_id = wrapper.idx;
 let bytes = wrapper.data;
 let mut {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
 "
@@ -202,7 +202,7 @@ fn load_output(data: &[(String, String)]) -> String {
                     "
 let bytes = types::load_output_data({idx})?;
 let wrapper = <types::OnChainWrapper as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
-let output_id = wrapper.id;
+let output_id = wrapper.idx;
 if input_id != output_id {{
     return Err(crate::error::Error::TypeError);
 }}

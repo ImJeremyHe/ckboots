@@ -229,8 +229,8 @@ use ckb_std::high_level::load_cell_data;
 use ckb_std::high_level::exec_cell;
 use ckb_std::high_level::load_witness_args;
 use ckb_std::syscalls::SysError;
-use ckb_std::prelude::Entity;
-use ckb_std::core::ScriptHashType;
+use ckb_standalone_types::prelude::Entity;
+use ckb_standalone_types::core::ScriptHashType;
 
 pub fn load_cell_deps_data(idx: usize) -> Result<Vec<u8>, SysError> {
     load_cell_data(idx, Source::CellDep)
@@ -264,8 +264,7 @@ pub fn load_exec_script() -> Result<Vec<u8>, SysError> {
 
 pub fn exec_script(code_hash: &[u8]) -> Result<u64, SysError> {
     let argv = vec![];
-    exec_cell(code_hash, ScriptHashType::Type, 0, 0, &argv)?;
-    Ok(())
+    exec_cell(code_hash, ScriptHashType::Type, 0, 0, &argv)
 }
 use crate as ckboots ; pub struct Frog
 { pub physical : u8, pub traval_cnt : u8, } impl ckboots :: OnChain for Frog

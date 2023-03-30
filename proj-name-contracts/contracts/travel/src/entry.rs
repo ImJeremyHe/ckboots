@@ -16,7 +16,7 @@ pub fn main() -> Result<(), Error> {
 
 let bytes = types::load_input_data(0)?;
 let wrapper = <types::OnChainWrapper as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
-let input_id = wrapper.id;
+let input_id = wrapper.idx;
 let bytes = wrapper.data;
 let mut frog = <types::Frog as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
 
@@ -26,7 +26,7 @@ let mut frog = <types::Frog as types::OnChain>::_from_bytes(&bytes).ok_or(crate:
 
 let bytes = types::load_output_data(0)?;
 let wrapper = <types::OnChainWrapper as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
-let output_id = wrapper.id;
+let output_id = wrapper.idx;
 if input_id != output_id {
     return Err(crate::error::Error::TypeError);
 }

@@ -4,4 +4,5 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-ckb-std = "0.10.0"
+ckb-std = "=0.10.0"
+ckb-standalone-types = {version = "=0.1.2", default-features = false}
