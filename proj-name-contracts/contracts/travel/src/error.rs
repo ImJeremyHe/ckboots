@@ -7,6 +7,7 @@ pub enum Error {
     IndexOutOfBound = 1,
     ItemMissing,
     LengthNotEnough,
+    TypeError,
     Encoding,
     NotEqual,
 }

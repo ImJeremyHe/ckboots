@@ -134,6 +134,58 @@ impl<T: OnChain> OnChain for Vec<T> {
     }
 }
 
+// It is almost the same as
+// #[derive(OnChain)]
+pub struct OnChainWrapper {
+    pub idx: u8,
+    pub data: Vec<u8>,
+}
+
+impl OnChain for OnChainWrapper {
+    fn _capacity(&self) -> u64 {
+        self.idx._capacity() + self.data._capacity()
+    }
+    fn _to_bytes(&self) -> Vec<u8> {
+        let mut result = Vec::with_capacity(self._capacity() as usize);
+        result.extend(<u8 as OnChain>::_to_bytes(&self.idx));
+        result.extend(<Vec<u8> as OnChain>::_to_bytes(&self.data));
+        if let Some(_) = OnChainWrapper::_fixed_size() {
+            result
+        } else {
+            let mut prefix: Vec<u8> = result.len().to_le_bytes().to_vec();
+            prefix.extend(result);
+            prefix
+        }
+    }
+    fn _from_bytes(bytes: &[u8]) -> Option<Self> {
+        let left = bytes;
+        let (idx, left) = consume_and_decode::<u8>(left)?;
+        let (data, _) = consume_and_decode::<Vec<u8>>(left)?;
+        Some(Self { idx, data })
+    }
+    fn _fixed_size() -> Option<u64> {
+        let size = <u8 as OnChain>::_fixed_size()? + <Vec<u8> as OnChain>::_fixed_size()?;
+        Some(size)
+    }
+    fn _id() -> Option<&'static str> {
+        None
+    }
+    fn _eq(&self, other: &Self) -> bool {
+        if !self.idx._eq(&other.idx) {
+            return false;
+        }
+        if !self.data._eq(&other.data) {
+            return false;
+        }
+        true
+    }
+    fn _default() -> Self {
+        Self {
+            idx: <u8 as OnChain>::_default(),
+            data: <Vec<u8> as OnChain>::_default(),
+        }
+    }
+}
 // impl OnChain for String {
 //     fn _capacity(&self) -> u64 {
 //         self.as_bytes().len() as u64 + 8
@@ -202,7 +254,7 @@ pub fn load_user_input() -> Result<Vec<u8>, SysError> {
 }
 
 pub fn load_exec_script() -> Result<Vec<u8>, SysError> {
-    let witness_arg = load_witness_args(0, Source::Input)?:
+    let witness_arg = load_witness_args(0, Source::Input)?;
     if let Some(b) = witness_arg.output_type().to_opt() {
         Ok(b.as_slice().to_vec())
     } else {

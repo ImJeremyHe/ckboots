@@ -65,7 +65,7 @@ pub fn load_user_input() -> Result<Vec<u8>, SysError> {
 }
 
 pub fn load_exec_script() -> Result<Vec<u8>, SysError> {
-    let witness_arg = load_witness_args(0, Source::Input)?:
+    let witness_arg = load_witness_args(0, Source::Input)?;
     if let Some(b) = witness_arg.output_type().to_opt() {
         Ok(b.as_slice().to_vec())
     } else {

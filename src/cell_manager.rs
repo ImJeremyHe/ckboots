@@ -1,16 +1,19 @@
 use std::collections::HashMap;
 
 pub struct CellManager {
-    types: HashMap<&'static str, Vec<u8>>,
-    pending: HashMap<&'static str, Vec<u8>>,
+    // it is sorted
+    ids: Vec<&'static str>,
+    types: Vec<Vec<u8>>,
+    pending: HashMap<usize, Vec<u8>>,
 }
 
 impl CellManager {
     pub fn get_by_id(&self, id: &'static str) -> Option<&[u8]> {
-        Some(self.types.get(id)?)
+        let idx = self.ids.iter().position(|e| *e == id)?;
+        Some(self.types.get(idx)?)
     }
 
-    pub fn set_pending(&mut self, id: &'static str, data: Vec<u8>) {
+    pub fn set_pending(&mut self, id: usize, data: Vec<u8>) {
         self.pending.insert(id, data);
     }
 
@@ -21,12 +24,17 @@ impl CellManager {
     }
 
     pub fn new(data: Vec<(&'static str, Vec<u8>)>) -> Self {
-        let mut types = HashMap::new();
+        let mut data = data;
+        data.sort_by_key(|d| d.0);
+        let mut types = Vec::new();
+        let mut ids = Vec::new();
         data.into_iter().for_each(|(id, d)| {
-            types.insert(id, d);
+            types.push(d);
+            ids.push(id);
         });
 
         CellManager {
+            ids,
             types,
             pending: HashMap::new(),
         }

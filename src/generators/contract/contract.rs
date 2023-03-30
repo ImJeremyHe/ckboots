@@ -50,6 +50,7 @@ pub enum Error {
     IndexOutOfBound = 1,
     ItemMissing,
     LengthNotEnough,
+    TypeError,
     Encoding,
     NotEqual,
 }
@@ -143,6 +144,8 @@ fn load_cell_deps(data: &[(String, String)]) -> String {
                 let s = format!(
                     "
 let bytes = types::load_cell_deps_data({idx})?;
+let wrapper = <types::OnChainWrapper as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
+let bytes = wrapper.data;
 let {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
 "
                 );
@@ -176,6 +179,9 @@ fn load_input(data: &[(String, String)]) -> String {
                 let s = format!(
                     "
 let bytes = types::load_input_data({idx})?;
+let wrapper = <types::OnChainWrapper as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
+let input_id = wrapper.id;
+let bytes = wrapper.data;
 let mut {ident} = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
 "
                 );
@@ -195,6 +201,11 @@ fn load_output(data: &[(String, String)]) -> String {
                 let s = format!(
                     "
 let bytes = types::load_output_data({idx})?;
+let wrapper = <types::OnChainWrapper as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
+let output_id = wrapper.id;
+if input_id != output_id {{
+    return Err(crate::error::Error::TypeError);
+}}
 let {ident}_output = <types::{type_path} as types::OnChain>::_from_bytes(&bytes).ok_or(crate::error::Error::Encoding)?;
 if !{ident}._eq(&{ident}_output) {{
     return Err(crate::error::Error::NotEqual);
